@@ -1,0 +1,233 @@
+\documentclass[10pt]{article}
+\usepackage{minted, ctex, url}
+\usepackage{amsthm, amsmath, amssymb, amsfonts}
+\usepackage{graphicx, float, xcolor, subcaption}
+%\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage[a4paper,left=3cm,right=3cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage[toc,page]{appendix}
+\usepackage{rotating}
+\usepackage[hyperref=true,backend=biber,sorting=none,backref=true]{biblatex}
+\addbibresource{ref.bib}
+
+\title{周报(2020-10-12)}
+\author{赖泽强}
+\newtheorem{theorem}{\hspace{2em}Theorem}[section]
+\newtheorem{definition}{\hspace{2em}Definition}[section]
+\newtheorem{lemma}{\hspace{2em}Lemma}[section]
+\newtheorem{proposition}{\hspace{2em}Proposition}[section]
+\newtheorem{corollary}{\hspace{2em}Corollary}[section]
+\newcommand{\todo}[1]{{\color{red}[TODO: #1]}}
+
+\newcommand{\F}{\mathbb F}
+\newcommand{\E}{\mathbb E}
+\newcommand{\R}{\mathbb R}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Prob}{\mathbb P}
+
+\newcommand{\textand}{\quad \text{and} \quad}
+\newcommand{\textor}{\quad \text{or} \quad}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\norm}[1]{\left \Vert #1 \right \Vert}
+\newcommand{\set}[1]{\left \{ #1 \right \}}
+\newcommand{\tr}{\text{tr}} % trace
+\newcommand{\Var}{\text{Var}} 
+\newcommand{\diag}{\text{diag}} 
+\newcommand{\inner}[2]{\left \langle #1, #2 \right \rangle}
+
+
+
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+
+\section{本周工作}
+
+\begin{enumerate}
+\item
+  阅读论文 ``Bring Old Photos Back to Life''。
+\item
+  学习VAE。
+\item
+  复习生成式模型相关知识，如GDA，朴素贝叶斯等。
+\item
+  复习概率论，概率模型相关知识。
+\end{enumerate}
+
+\section{下周计划}
+
+\begin{enumerate}
+\item
+  阅读并尝试运行``Bring Old Photos Back to Life''的代码。
+\item
+  继续学习``Bring Old Photos Back to
+  Life''论文里一些不懂的概念和数学知识。
+\item
+  阅读与``Bring Old Photos Back to Life''相关的论文。
+\end{enumerate}
+
+\section{论文总结}
+
+主要只读了一篇论文。
+
+\subsection{Bring Old Photos Back to Life}
+
+这个工作\cite{wan2020bringing}\cite{wan2020old}的目标任务是修复老照片，即恢复老照片原来的样子。
+
+具体来说，包括修复两大方面损伤：
+
+\begin{enumerate}
+\item
+  非结构化损伤（Unstructured defects）：包括胶片噪声，模糊，褪色等。
+\item
+  结构化损伤（Structured defects）：包括折痕和污渍等。
+\end{enumerate}
+
+\subsubsection{相关工作}
+
+之前也有一些工作尝试对老照片进行修复，但这些工作存在两个主要问题：
+
+\begin{enumerate}
+\item
+  首先是Mixed degradation
+  issue。老照片的损伤通常是多方面的，但是之前的工作要么是只针对某一方面进行修复，要么是使用一种方法对付所有方面。
+\item
+  其次，目前大部分的模型，包括深度学习模型，都是使用合成的数据对进行训练，这种模型对于真实数据的效果会大打折扣。CycleGAN虽然使用了真实数据，但是它使用的不匹配的数据进行训练。目前没有工作同时使用真实数据和配对数据（存疑，需要调研下）。
+\end{enumerate}
+
+\subsubsection{方法}
+
+这篇论文同时使用真实老照片，合成老照片及其对应的ground
+truth作为训练数据。
+
+如图\ref{arch}所示，文中所述模型主要分为三部分：
+
+\begin{itemize}
+\item
+  首先是两个VAE\cite{kingma2014autoencoding}负责将老照片和好照片分别映射到两个隐空间。
+
+  \begin{itemize}
+  \item
+    合成老照片和真实老照片公用一个VAE。
+  \item
+    VAE以非监督的形式单独训练，训练好后固定不变。
+  \end{itemize}
+\item
+  然后是一个翻译网络T，负责将老照片的隐空间映射到好照片的隐空间。
+
+  \begin{itemize}
+  \item
+    为了处理Structured
+    defects（通常需要更多的上下文），作者引入了Partial nonlocal block\cite{wang2018nonlocal}。
+  \end{itemize}
+\end{itemize}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.6]{/Users/laizeqiang/Documents/Study/BIT-Graduate/周报/2020-10-12/imgs/arch.png}
+\caption{网络结构}
+\label{arch}
+\end{figure}
+
+\subsubsection{重要公式解读}
+
+\paragraph{VAE}~{}
+\newline
+
+论文所用的VAE Loss前两项和传统的一致，最后一项叫 least-square loss
+(LSGAN)\cite{mao2017squares}，用于解决VAE中的over-smooth issue。
+
+\begin{equation}
+\begin{aligned}
+\mathcal{L}_{\mathrm{VAE}_{1}}(r) &=\mathrm{KL}\left(E_{\mathcal{R}, \mathcal{X}}\left(z_{r} \mid r\right) \| \mathcal{N}(0, I)\right) \\
+&+\alpha \mathbb{E}_{z_{r} \sim E_{\mathcal{R}, \mathcal{X}}\left(z_{r} \mid r\right)}\left[\left\|G_{\mathcal{R}, \mathcal{X}}\left(r_{\mathcal{R} \rightarrow \mathcal{R}} \mid z_{r}\right)-r\right\|_{1}\right] \\
+&+\mathcal{L}_{\mathrm{VAE}_{1}, \mathrm{GAN}}(r)
+\end{aligned}
+\end{equation}
+
+为了更好缩小真实老照片和合成老照片的domain
+gap，作者还引入了一个Adversarial
+loss训练一个Discriminator，\(D_{r,x}\)越大，则Discriminator认为这个feature越接近真实老照片的feature。
+
+\begin{equation}
+\begin{aligned}
+\mathcal{L}_{\mathrm{VAE}_{1}, \mathrm{GAN}}^{\text {latent }}(r, x)=& \mathbb{E}_{x \sim \mathcal{X}}\left[D_{\mathcal{R}, \mathcal{X}}\left(E_{\mathcal{R}, \mathcal{X}}(x)\right)^{2}\right] \\
+&+\mathbb{E}_{r \sim \mathcal{R}}\left[\left(1-D_{\mathcal{R}, \mathcal{X}}\left(E_{\mathcal{R}, \mathcal{X}}(r)\right)\right)^{2}\right]
+\end{aligned}
+\end{equation}
+
+下面的就是第一个VAE 总的Loss：
+
+\[\min _{E_{\mathcal{R}, \mathcal{X}}, G_{\mathcal{R}, \mathcal{X}}} \max _{D_{\mathcal{R}, \mathcal{X}}} \mathcal{L}_{\mathrm{VAE}_{1}}(r)+\mathcal{L}_{\mathrm{VAE}_{1}}(x)+\mathcal{L}_{\mathrm{VAE}_{1}, \mathrm{GAN}}^{\text {latent }}(r, x)\]
+
+\paragraph{Mapping}~{}
+\newline
+
+\[\mathcal{L}_{\mathcal{T}}(x, y)=\lambda_{1} \mathcal{L}_{\mathcal{T}, \ell_{1}}+\mathcal{L}_{\mathcal{T}, \mathrm{GAN}}+\lambda_{2} \mathcal{L}_{\mathrm{FM}}\]
+
+\[\left.\mathcal{L}_{\mathcal{T}, \ell_{1}}=\mathbb{E} \| \mathcal{T}\left(z_{x}\right)-z_{y}\right) \|_{1}\]
+
+这个Loss用于训练翻译网络T，第一部分是隐向量的L1 Loss，第二部分也是
+least-square loss (LSGAN)，第三部分是feature matching loss 用于
+stabilize the GAN training. \textbf{后两部分目前没看懂}。
+
+\paragraph{Multiple degradation restoration}~{}
+\newline
+
+在基础的Mapping网络中，Resnet Block使用的CNN
+filter只能关注到local的feature，但是一些structured
+defect，比如褶皱等，必须要有更大范围的上下文信息才能够进行修复（你不可能靠周围的褶皱修复褶皱）。
+
+因此，作者引入了一个nonlocal block，之所以叫partial是因为nonlocal
+block的原文里使用的是所有像素的信息，这里作者只关注非褶皱像素（作者还引入了一个defect
+region detection network标出一个defect mask，即下面的m，m=1表示是defect
+region）。
+
+下面这个公式是nonlocal block原文里给出的公式，简单来说nonlocal
+block就是将某个像素的特征值就是其他像素特征值的加权平均。公式里的\texttt{f}就是计算权值的一个函数，g则是计算特征值的函数，C(x)是一个正则项。
+
+\[\mathbf{y}_{i}=\frac{1}{\mathcal{C}(\mathbf{x})} \sum_{\forall j} f\left(\mathbf{x}_{i}, \mathbf{x}_{j}\right) g\left(\mathbf{x}_{j}\right)\]
+
+下面的公式都是本篇论文里的公式：
+
+\begin{itemize}
+\item
+  \(s_{i,j}\)相当于计算权值，从公式里不难看出，这个权值对于defect
+  region里的像素是0，即我们不关注defect region里的像素的特征值。
+\item
+  \(f_{i,j}\)用于计算两个像素之间的像素度，显然，越相似的像素我们应该越关注。
+\item
+  第三个公式几乎就是nonlocal block原文中的本文形式；
+\item
+  最后一个公式表示，对于defect region里的像素，我们采用nonlocal
+  block计算出来的特征值，对于其他像素，特征值保持不变。
+\end{itemize}
+
+\[s_{i, j}=\left(1-m_{j}\right) f_{i, j} / \sum_{\forall k}\left(1-m_{k}\right) f_{i, k}\]
+
+\[f_{i, j}=\exp \left(\theta\left(F_{i}\right)^{T} \cdot \phi\left(F_{j}\right)\right)\]
+
+\[O_{i}=\nu\left(\sum_{\forall j} s_{i, j} \mu\left(F_{j}\right)\right)\]
+
+\[F_{\text {fuse}}=(1-m) \odot \rho_{\text {local }}(F)+m \odot \rho_{\text {global }}(O)\]
+
+\subsubsection{主要贡献}
+
+\begin{itemize}
+\item
+  提出了一种比较有效的，在domain
+  translation问题中，使用未配对数据的方法。
+\item
+  这个方法有机会使用到别的domain
+  translation问题上，比如降噪，可以结合魏学长之前的工作进行扩展。
+\end{itemize}
+
+\printbibliography
+
+\end{document}
